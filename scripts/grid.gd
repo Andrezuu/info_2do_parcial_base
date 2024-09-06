@@ -37,6 +37,7 @@ var final_touch = Vector2.ZERO
 var is_controlling = false
 
 # scoring variables and signals
+signal score_updated(points)
 
 
 # counter variables and signals
@@ -199,16 +200,19 @@ func find_matches():
 	
 func destroy_matched():
 	var was_matched = false
+	var number_matched = 0
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] != null and all_pieces[i][j].matched:
 				was_matched = true
+				number_matched += 1
 				all_pieces[i][j].queue_free()
 				all_pieces[i][j] = null
 				
 	move_checked = true
 	if was_matched:
 		get_parent().get_node("collapse_timer").start()
+		emit_signal("score_updated", number_matched * 10)
 	else:
 		swap_back()
 
