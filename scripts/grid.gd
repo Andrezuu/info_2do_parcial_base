@@ -41,7 +41,8 @@ signal score_updated(points)
 
 
 # counter variables and signals
-
+signal move_counter()
+var moves = 15
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -213,6 +214,9 @@ func destroy_matched():
 	if was_matched:
 		get_parent().get_node("collapse_timer").start()
 		emit_signal("score_updated", number_matched * 10)
+		emit_signal("move_counter")
+		if moves == 0:
+			game_over()
 	else:
 		swap_back()
 
