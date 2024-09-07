@@ -2,6 +2,19 @@ extends Node2D
 
 # state machine
 enum {WAIT, MOVE}
+# COLORS
+const BLUE = "blue"
+const GREEN = "green"
+const LIGHT_GREEN = "light_green"
+const PINK = "pink"
+const YELLOW = "yellow"
+const ORANGE = "orange"
+# SPECIAL TYPE PIECES
+const COLUMN =  "column"
+const ROW =  "row"
+const ADJACENT = "adjacent"
+const NORMAL = "normal"
+
 var state
 
 # grid
@@ -14,13 +27,35 @@ var state
 
 # piece array
 var possible_pieces = [
-	preload("res://scenes/blue_piece.tscn"),
-	preload("res://scenes/green_piece.tscn"),
-	preload("res://scenes/light_green_piece.tscn"),
-	preload("res://scenes/pink_piece.tscn"),
-	preload("res://scenes/yellow_piece.tscn"),
-	preload("res://scenes/orange_piece.tscn"),
+	preload("res://scenes/BluePieces/blue_piece.tscn"),
+	preload("res://scenes/greenPieces/green_piece.tscn"),
+	preload("res://scenes/lightGreenPieces/light_green_piece.tscn"),
+	preload("res://scenes/pinkPieces/pink_piece.tscn"),
+	preload("res://scenes/yellowPieces/yellow_piece.tscn"),
+	preload("res://scenes/orangePieces/orange_piece.tscn"),
 ]
+
+var row_pieces = {
+	BLUE: preload("res://scenes/BluePieces/blue_piece_row.tscn"),
+	GREEN: preload("res://scenes/greenPieces/green_piece_row.tscn"),
+	LIGHT_GREEN: preload("res://scenes/lightGreenPieces/light_green_piece_row.tscn"),
+	ORANGE: preload("res://scenes/orangePieces/orange_piece_row.tscn"),
+	PINK: preload("res://scenes/pinkPieces/pink_piece_row.tscn"),
+	YELLOW: preload("res://scenes/yellowPieces/yellow_piece_row.tscn")
+}
+
+var column_pieces = {
+	BLUE: preload("res://scenes/BluePieces/blue_piece_column.tscn"),
+	GREEN: preload("res://scenes/greenPieces/green_piece_column.tscn"),
+	LIGHT_GREEN: preload("res://scenes/lightGreenPieces/light_green_piece_column.tscn"),
+	ORANGE: preload("res://scenes/orangePieces/orange_piece_column.tscn"),
+	PINK: preload("res://scenes/pinkPieces/pink_piece_column.tscn"),
+	YELLOW: preload("res://scenes/yellowPieces/yellow_piece_column.tscn")
+}
+
+
+
+
 # current pieces in scene
 var all_pieces = []
 
@@ -172,33 +207,50 @@ func find_matches():
 			if all_pieces[i][j] != null:
 				var current_color = all_pieces[i][j].color
 				# detect horizontal matches
+				# Detectar match horizontal de 4
 				if (
-					i > 0 and i < width -1 
-					and 
-					all_pieces[i - 1][j] != null and all_pieces[i + 1][j]
-					and 
-					all_pieces[i - 1][j].color == current_color and all_pieces[i + 1][j].color == current_color
+					i > 0 and i < width - 2
+					and all_pieces[i - 1][j] != null
+					and all_pieces[i + 1][j] != null 
+					and all_pieces[i + 2][j] != null
+					and all_pieces[i - 1][j].color == current_color 
+					and all_pieces[i + 1][j].color == current_color 
+					and all_pieces[i + 2][j].color == current_color
 				):
-					all_pieces[i - 1][j].matched = true
-					all_pieces[i - 1][j].dim()
-					all_pieces[i][j].matched = true
-					all_pieces[i][j].dim()
-					all_pieces[i + 1][j].matched = true
-					all_pieces[i + 1][j].dim()
-				# detect vertical matches
+					mark_pieces_for_removal(i, j, true)
+					replace_with_special_piece(i, j, current_color, true)
+					continue
+				# vertical match 4
 				if (
-					j > 0 and j < height -1 
-					and 
-					all_pieces[i][j - 1] != null and all_pieces[i][j + 1]
-					and 
-					all_pieces[i][j - 1].color == current_color and all_pieces[i][j + 1].color == current_color
+					j > 0 and j < height - 2
+					and all_pieces[i][j - 1] != null
+					and all_pieces[i][j + 1] != null 
+					and all_pieces[i][j + 2] != null
+					and all_pieces[i][j - 1].color == current_color 
+					and all_pieces[i][j + 1].color == current_color 
+					and all_pieces[i][j + 2].color == current_color
 				):
-					all_pieces[i][j - 1].matched = true
-					all_pieces[i][j - 1].dim()
-					all_pieces[i][j].matched = true
-					all_pieces[i][j].dim()
-					all_pieces[i][j + 1].matched = true
-					all_pieces[i][j + 1].dim()
+					mark_pieces_for_removal(i, j, false)
+					replace_with_special_piece(i, j, current_color, false)
+					continue
+				# Detectar match horizontal de 3
+				if (
+					i > 0 and i < width - 1
+					and all_pieces[i - 1][j] != null 
+					and all_pieces[i + 1][j]
+					and all_pieces[i - 1][j].color == current_color 
+					and all_pieces[i + 1][j].color == current_color
+				):
+					mark_pieces_for_removal(i, j, true)
+				# Detectar match vertical de 3
+				if (
+					j > 0 and j < height - 1
+					and all_pieces[i][j - 1] != null 
+					and all_pieces[i][j + 1]
+					and all_pieces[i][j - 1].color == current_color 
+					and all_pieces[i][j + 1].color == current_color
+				):
+					mark_pieces_for_removal(i, j, false)
 					
 	get_parent().get_node("destroy_timer").start()
 	
@@ -210,8 +262,27 @@ func destroy_matched():
 			if all_pieces[i][j] != null and all_pieces[i][j].matched:
 				was_matched = true
 				number_matched += 1
-				all_pieces[i][j].queue_free()
-				all_pieces[i][j] = null
+				
+				if all_pieces[i][j].type == ROW:
+					# Destroy all pieces in the row
+					for col in range(width):
+						if all_pieces[col][j] != null:
+							all_pieces[col][j].matched = true
+							all_pieces[col][j].dim()
+							all_pieces[col][j].queue_free()
+							all_pieces[col][j] = null
+				elif all_pieces[i][j].type == COLUMN:
+					# Destroy all pieces in the column
+					for row in range(height):
+						if all_pieces[i][row] != null:
+							all_pieces[i][row].matched = true
+							all_pieces[i][row].dim()
+							all_pieces[i][row].queue_free()
+							all_pieces[i][row] = null
+				elif all_pieces[i][j].type == NORMAL:
+				# Destroy the matched piece itself
+					all_pieces[i][j].queue_free()
+					all_pieces[i][j] = null
 				
 	move_checked = true
 	if was_matched:
@@ -220,13 +291,6 @@ func destroy_matched():
 		if deduct_move:
 			emit_signal("move_counter")
 			deduct_move = false
-		get_parent().get_node("collapse_timer").start()
-		emit_signal("score_updated", number_matched * 10)
-
-		if deduct_move:
-			emit_signal("move_counter")
-			deduct_move = false
-
 		if moves == 0:
 			game_over()
 	else:
@@ -247,7 +311,6 @@ func collapse_columns():
 	get_parent().get_node("refill_timer").start()
 
 func refill_columns():
-	
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] == null:
@@ -295,3 +358,67 @@ func _on_refill_timer_timeout():
 func game_over():
 	state = WAIT
 	print("game over")
+
+
+func replace_with_special_piece(i, j, color, is_horizontal):
+	print(i, j, 'ij de replace')
+	var special_piece
+	var special_type
+	if is_horizontal:
+		special_piece = row_pieces[color].instantiate()
+		special_type = ROW
+		for k in range(-1, 3):
+			if in_grid(i + k, j):
+				if k == 0:
+					continue
+				#all_pieces[i + k][j].matched = true
+				#all_pieces[i + k][j].dim()
+				all_pieces[i + k][j].queue_free()
+				all_pieces[i + k][j] = null
+		
+	else:
+		special_piece = column_pieces[color].instantiate()
+		special_type = COLUMN
+		for k in range(-1, 3): 
+			if in_grid(i, j + k):
+				if k == 0:
+					continue
+				#all_pieces[i][j + k].matched = true
+				#all_pieces[i][j + k].dim()
+				all_pieces[i][j + k].queue_free()
+				all_pieces[i][j + k] = null
+	
+	if all_pieces[i][j]:
+		all_pieces[i][j].queue_free()
+	all_pieces[i][j] = special_piece
+	all_pieces[i][j].type = special_type
+	add_child(special_piece)
+	special_piece.position = grid_to_pixel(i, j)
+	get_parent().get_node("collapse_timer").start()
+
+#func mark_pieces_for_removal(i, j, is_horizontal):
+	#if is_horizontal:
+		#all_pieces[i - 1][j].matched = true
+		#all_pieces[i - 1][j].dim()
+		#all_pieces[i][j].matched = true
+		#all_pieces[i][j].dim()
+		#all_pieces[i + 1][j].matched = true
+		#all_pieces[i + 1][j].dim()
+	#else:
+		#all_pieces[i][j - 1].matched = true
+		#all_pieces[i][j - 1].dim()
+		#all_pieces[i][j].matched = true
+		#all_pieces[i][j].dim()
+		#all_pieces[i][j + 1].matched = true
+		#all_pieces[i][j + 1].dim()
+func mark_pieces_for_removal(i, j, is_horizontal):
+	if is_horizontal:
+		for k in range(-1, 2):
+			if in_grid(i + k, j):
+				all_pieces[i + k][j].matched = true
+				all_pieces[i + k][j].dim()
+	else:
+		for k in range(-1, 2):
+			if in_grid(i, j + k):
+				all_pieces[i][j + k].matched = true
+				all_pieces[i][j + k].dim()
