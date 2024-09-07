@@ -16,7 +16,9 @@ func _on_score_updated(points):
 	current_score += points
 	score_label.text = str(current_score)
 
-func _on_move_counter(	):
+func _on_move_counter():
 	current_count -= 1
 	counter_label.text = str(current_count)
+	if current_count == 0:
+		print('game over')
 	

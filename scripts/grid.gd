@@ -43,6 +43,7 @@ signal score_updated(points)
 # counter variables and signals
 signal move_counter()
 var moves = 15
+var deduct_move = false
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -130,6 +131,8 @@ func swap_pieces(column, row, direction: Vector2):
 	#other_piece.position = grid_to_pixel(column, row)
 	first_piece.move(grid_to_pixel(column + direction.x, row + direction.y))
 	other_piece.move(grid_to_pixel(column, row))
+	
+	deduct_move = true
 	if not move_checked:
 		find_matches()
 
@@ -213,8 +216,17 @@ func destroy_matched():
 	move_checked = true
 	if was_matched:
 		get_parent().get_node("collapse_timer").start()
+		emit_signal("score_updated", number_matched * 10)        
+		if deduct_move:
+			emit_signal("move_counter")
+			deduct_move = false
+		get_parent().get_node("collapse_timer").start()
 		emit_signal("score_updated", number_matched * 10)
-		emit_signal("move_counter")
+
+		if deduct_move:
+			emit_signal("move_counter")
+			deduct_move = false
+
 		if moves == 0:
 			game_over()
 	else:
@@ -224,7 +236,7 @@ func collapse_columns():
 	for i in width:
 		for j in height:
 			if all_pieces[i][j] == null:
-				print(i, j)
+				#print(i, j)
 				# look above
 				for k in range(j + 1, height):
 					if all_pieces[i][k] != null:
