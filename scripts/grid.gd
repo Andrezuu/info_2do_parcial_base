@@ -32,8 +32,8 @@ var possible_pieces = [
 	preload("res://scenes/greenPieces/green_piece.tscn"),
 	preload("res://scenes/lightGreenPieces/light_green_piece.tscn"),
 	preload("res://scenes/pinkPieces/pink_piece.tscn"),
-	preload("res://scenes/yellowPieces/yellow_piece.tscn"),
-	preload("res://scenes/orangePieces/orange_piece.tscn"),
+	#preload("res://scenes/yellowPieces/yellow_piece.tscn"),
+	#preload("res://scenes/orangePieces/orange_piece.tscn"),
 ]
 
 var row_pieces = {
@@ -165,8 +165,20 @@ func touch_input():
 func swap_pieces(column, row, direction: Vector2):
 	var first_piece = all_pieces[column][row]
 	var other_piece = all_pieces[column + direction.x][row + direction.y]
+	
+	
 	if first_piece == null or other_piece == null:
 		return
+	var is_first_rainbow = first_piece.type == RAINBOW
+	var is_other_rainbow =  other_piece.type == RAINBOW
+	
+	if is_first_rainbow:
+		clean_color(column, row, other_piece.color)
+		move_checked = true
+	if is_other_rainbow:
+		clean_color(column + direction.x, row + direction.y, first_piece.color)
+		move_checked = true
+		
 	# swap
 	state = WAIT
 	store_info(first_piece, other_piece, Vector2(column, row), direction)
@@ -210,106 +222,7 @@ func touch_difference(grid_1, grid_2):
 func _process(delta):
 	if state == MOVE:
 		touch_input()
-
-func find_matches():
-	for i in width:
-		for j in height:
-			if all_pieces[i][j] != null:
-				var current_color = all_pieces[i][j].color
-				if all_pieces[i][j].type == RAINBOW:
-					clean_color(i, j, all_pieces[i][j].color)
-				# Detect horizontal match of 5 or more
-				if (
-					i > 1 and i < width - 3
-					and all_pieces[i - 2][j] != null
-					and all_pieces[i - 1][j] != null
-					and all_pieces[i + 1][j] != null 
-					and all_pieces[i + 2][j] != null
-					and all_pieces[i - 2][j].color == current_color 
-					and all_pieces[i - 1][j].color == current_color 
-					and all_pieces[i + 1][j].color == current_color 
-					and all_pieces[i + 2][j].color == current_color
-				):
-					#mark_pieces_for_removal(i, j, true)
-					replace_with_special_piece(i + 2, j, current_color, RAINBOW)
-					continue
-				# Detect vertical match of 5 or more
-				if (
-					j > 1 and j < height - 3
-					and all_pieces[i][j - 2] != null
-					and all_pieces[i][j - 1] != null
-					and all_pieces[i][j + 1] != null 
-					and all_pieces[i][j + 2] != null
-					and all_pieces[i][j - 2].color == current_color 
-					and all_pieces[i][j - 1].color == current_color 
-					and all_pieces[i][j + 1].color == current_color 
-					and all_pieces[i][j + 2].color == current_color
-				):
-					#mark_pieces_for_removal(i, j, false)
-					replace_with_special_piece(i, j + 2, current_color, RAINBOW)
-					continue
-				# Detect T or L shape match (5 pieces)
-				if (
-					i > 0 and i < width - 1 and j > 0 and j < height - 1
-					and all_pieces[i - 1][j] != null
-					and all_pieces[i + 1][j] != null
-					and all_pieces[i][j - 1] != null
-					and all_pieces[i][j + 1] != null
-					and all_pieces[i - 1][j].color == current_color 
-					and all_pieces[i + 1][j].color == current_color 
-					and all_pieces[i][j - 1].color == current_color 
-					and all_pieces[i][j + 1].color == current_color
-				):
-					#mark_pieces_for_removal(i, j, false)
-					replace_with_special_piece(i, j, current_color, ADJACENT)
-					continue
-				# Detectar match horizontal de 4
-				if (
-					i > 0 and i < width - 2
-					and all_pieces[i - 1][j] != null
-					and all_pieces[i + 1][j] != null 
-					and all_pieces[i + 2][j] != null
-					and all_pieces[i - 1][j].color == current_color 
-					and all_pieces[i + 1][j].color == current_color 
-					and all_pieces[i + 2][j].color == current_color
-				):
-					#mark_pieces_for_removal(i, j, true)
-					replace_with_special_piece(i, j, current_color, ROW)
-					continue
-				# vertical match 4
-				if (
-					j > 0 and j < height - 2
-					and all_pieces[i][j - 1] != null
-					and all_pieces[i][j + 1] != null 
-					and all_pieces[i][j + 2] != null
-					and all_pieces[i][j - 1].color == current_color 
-					and all_pieces[i][j + 1].color == current_color 
-					and all_pieces[i][j + 2].color == current_color
-				):
-					#mark_pieces_for_removal(i, j, false)
-					replace_with_special_piece(i, j, current_color, COLUMN)
-					continue
-				# Detectar match horizontal de 3
-				if (
-					i > 0 and i < width - 1
-					and all_pieces[i - 1][j] != null 
-					and all_pieces[i + 1][j]
-					and all_pieces[i - 1][j].color == current_color 
-					and all_pieces[i + 1][j].color == current_color
-				):
-					mark_pieces_for_removal(i, j, true)
-				# Detectar match vertical de 3
-				if (
-					j > 0 and j < height - 1
-					and all_pieces[i][j - 1] != null 
-					and all_pieces[i][j + 1]
-					and all_pieces[i][j - 1].color == current_color 
-					and all_pieces[i][j + 1].color == current_color
-				):
-					mark_pieces_for_removal(i, j, false)
-					
-	get_parent().get_node("destroy_timer").start()
-	
+			
 func destroy_matched():
 	var was_matched = false
 	var number_matched = 0
@@ -422,7 +335,7 @@ func replace_with_special_piece(i, j, color, type):
 		special_piece = adjacent_pieces[color].instantiate()
 	elif type == RAINBOW:
 		special_piece = rainbow_piece.instantiate()
-		print(special_piece)
+		print(special_piece, 'de reokace')
 	
 	if type == ROW or type == COLUMN:
 		for k in range(-1, 3):
@@ -452,12 +365,12 @@ func replace_with_special_piece(i, j, color, type):
 
 func mark_pieces_for_removal(i, j, is_horizontal):
 	if is_horizontal:
-		for k in range(-1, 2):
+		for k in range(0, 3):
 			if in_grid(i + k, j):
 				all_pieces[i + k][j].matched = true
 				all_pieces[i + k][j].dim()
 	else:
-		for k in range(-1, 2):
+		for k in range(0, 3):
 			if in_grid(i, j + k):
 				all_pieces[i][j + k].matched = true
 				all_pieces[i][j + k].dim()
@@ -501,6 +414,7 @@ func clean_all_diag(col, row):
 			all_pieces[col + offset][row - offset] = null
 
 func clean_color(curr_col, curr_row, color):
+	print('cleaneando color ', color)
 	for col in range(width):
 		for row in range(height):
 			var curr_piece = all_pieces[col][row] 
@@ -509,3 +423,108 @@ func clean_color(curr_col, curr_row, color):
 				all_pieces[col][row].dim()
 				all_pieces[col][row].queue_free()
 				all_pieces[col][row] = null
+	all_pieces[curr_col][curr_row].matched = true
+	all_pieces[curr_col][curr_row].dim()
+	all_pieces[curr_col][curr_row].queue_free()
+	all_pieces[curr_col][curr_row] = null
+	get_parent().get_node("collapse_timer").start()
+
+
+func find_matches():
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null:
+				var current_color = all_pieces[i][j].color
+				
+				if is_t_shape(i, j) or is_l_shape(i, j):
+					replace_with_special_piece(i, j, current_color, ADJACENT)
+				# Check for horizontal matches
+				if i <= width - 5:
+					if is_match(i, j, Vector2(1, 0), 5):
+						replace_with_special_piece(i + 2, j, current_color, RAINBOW)
+						continue
+					elif is_match(i, j, Vector2(1, 0), 4):
+						replace_with_special_piece(i + 1, j, current_color, ROW)
+						continue
+				elif i <= width - 4:
+					if is_match(i, j, Vector2(1, 0), 4):
+						replace_with_special_piece(i + 1, j, current_color, ROW)
+						continue
+				
+				# Check for vertical matches
+				if j <= height - 5:
+					if is_match(i, j, Vector2(0, 1), 5):
+						replace_with_special_piece(i, j + 2, current_color, RAINBOW)
+						continue
+					elif is_match(i, j, Vector2(0, 1), 4):
+						replace_with_special_piece(i, j + 1, current_color, COLUMN)
+						continue
+				elif j <= height - 4:
+					if is_match(i, j, Vector2(0, 1), 4):
+						replace_with_special_piece(i, j + 1, current_color, COLUMN)
+						continue
+				 #Check for horizontal match of 3
+				if i > 0 and i < width - 1 and is_match(i, j, Vector2(1, 0), 3):
+					mark_pieces_for_removal(i, j, true)
+				## Check for vertical match of 3
+				if j > 0 and j < height - 1 and is_match(i, j, Vector2(0, 1), 3):
+					mark_pieces_for_removal(i, j, false)
+
+	get_parent().get_node("destroy_timer").start()
+
+func is_match(i, j, direction: Vector2, length: int) -> bool:
+	#if all_pieces[i][j].type == RAINBOW:
+		#return true
+	for k in range(1, length):
+		var x = i + k * direction.x
+		var y = j + k * direction.y
+		if not in_grid(x, y) or all_pieces[x][y] == null or all_pieces[x][y].color != all_pieces[i][j].color:
+			return false
+	return true
+
+
+func is_t_shape(i, j) -> bool:
+	# Horizontal T shape
+	if is_match(i, j, Vector2(1, 0), 3) and (
+		(j > 0 and all_pieces[i + 1][j - 1] != null and all_pieces[i + 1][j - 1].color == all_pieces[i][j].color) or
+		(j < height - 1 and all_pieces[i + 1][j + 1] != null and all_pieces[i + 1][j + 1].color == all_pieces[i][j].color)
+	):
+		return true
+
+	# Vertical T shape
+	if is_match(i, j, Vector2(0, 1), 3) and (
+		(i > 0 and all_pieces[i - 1][j + 1] != null and all_pieces[i - 1][j + 1].color == all_pieces[i][j].color) or
+		(i < width - 1 and all_pieces[i + 1][j + 1] != null and all_pieces[i + 1][j + 1].color == all_pieces[i][j].color)
+	):
+		return true
+
+	return false
+
+func is_l_shape(i, j) -> bool:
+	# L shape, starting horizontally
+	if is_match(i, j, Vector2(1, 0), 3):
+		if ((
+			j > 0 
+			and all_pieces[i + 2][j - 1] != null
+			and all_pieces[i + 2][j - 1].color == all_pieces[i][j].color) 
+			or (
+			j < height - 1 
+			and all_pieces[i + 2][j + 1] != null 
+			and all_pieces[i + 2][j + 1].color == all_pieces[i][j].color)
+		):
+			return true
+
+	# L shape, starting vertically
+	if is_match(i, j, Vector2(0, 1), 3):
+		if ((
+			i > 0
+			and all_pieces[i - 1][j + 2] != null
+			and all_pieces[i - 1][j + 2].color == all_pieces[i][j].color) 
+			or (
+			i < width - 1
+			and all_pieces[i + 1][j + 2] != null 
+			and all_pieces[i + 1][j + 2].color == all_pieces[i][j].color)
+		):
+			return true
+
+	return false
