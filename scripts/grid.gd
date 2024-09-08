@@ -282,6 +282,7 @@ func refill_columns():
 				var rand = randi_range(0, possible_pieces.size() - 1)
 				# instance 
 				var piece = possible_pieces[rand].instantiate()
+				var color
 				# repeat until no matches
 				var max_loops = 100
 				var loops = 0
@@ -289,11 +290,13 @@ func refill_columns():
 					rand = randi_range(0, possible_pieces.size() - 1)
 					loops += 1
 					piece = possible_pieces[rand].instantiate()
+					color = piece.color
 				add_child(piece)
 				piece.position = grid_to_pixel(i, j - y_offset)
 				piece.move(grid_to_pixel(i, j))
 				# fill array with pieces
 				all_pieces[i][j] = piece
+				all_pieces[i][j].color = piece.color
 				
 	check_after_refill()
 
@@ -322,6 +325,8 @@ func _on_refill_timer_timeout():
 func game_over():
 	state = WAIT
 	print("game over")
+	show_game_over_screen()
+
 
 
 func replace_with_special_piece(i, j, color, type):
@@ -341,16 +346,23 @@ func replace_with_special_piece(i, j, color, type):
 		for k in range(-1, 3):
 			if type == ROW and in_grid(i + k, j):
 				if all_pieces[i + k][j]:
+					all_pieces[i + k][j].matched = true
+					all_pieces[i + k][j].dim()
+					all_pieces[i + k][j].queue_free()
 					all_pieces[i + k][j].queue_free()
 					all_pieces[i + k][j] = null
 			elif type == COLUMN and in_grid(i, j + k):
 				if all_pieces[i][j + k]:
+					all_pieces[i][j + k].matched = true
+					all_pieces[i][j + k].dim()
 					all_pieces[i][j + k].queue_free()
 					all_pieces[i][j + k] = null
 	elif type == ADJACENT or type == RAINBOW:
 		for di in range(-1, 2):
 			for dj in range(-1, 2):
 				if in_grid(i + di, j + dj) and all_pieces[i + di][j + dj]:
+					all_pieces[i + di][j + dj].matched = true
+					all_pieces[i + di][j + dj].dim()
 					all_pieces[i + di][j + dj].queue_free()
 					all_pieces[i + di][j + dj] = null
 	
@@ -358,6 +370,8 @@ func replace_with_special_piece(i, j, color, type):
 		all_pieces[i][j].queue_free()
 	all_pieces[i][j] = special_piece
 	all_pieces[i][j].type = type
+	if all_pieces[i][j].color == "":
+		all_pieces[i][j].color = color
 	add_child(special_piece)
 	special_piece.position = grid_to_pixel(i, j)
 	get_parent().get_node("collapse_timer").start()
@@ -436,33 +450,33 @@ func find_matches():
 			if all_pieces[i][j] != null:
 				var current_color = all_pieces[i][j].color
 				
-				if is_t_shape(i, j) or is_l_shape(i, j):
+				if is_t_shape(i, j):
 					replace_with_special_piece(i, j, current_color, ADJACENT)
 				# Check for horizontal matches
 				if i <= width - 5:
 					if is_match(i, j, Vector2(1, 0), 5):
 						replace_with_special_piece(i + 2, j, current_color, RAINBOW)
-						continue
+						#continue
 					elif is_match(i, j, Vector2(1, 0), 4):
 						replace_with_special_piece(i + 1, j, current_color, ROW)
-						continue
+						#continue
 				elif i <= width - 4:
 					if is_match(i, j, Vector2(1, 0), 4):
 						replace_with_special_piece(i + 1, j, current_color, ROW)
-						continue
+						#continue
 				
 				# Check for vertical matches
 				if j <= height - 5:
 					if is_match(i, j, Vector2(0, 1), 5):
 						replace_with_special_piece(i, j + 2, current_color, RAINBOW)
-						continue
+						#continue
 					elif is_match(i, j, Vector2(0, 1), 4):
 						replace_with_special_piece(i, j + 1, current_color, COLUMN)
-						continue
+						#continue
 				elif j <= height - 4:
 					if is_match(i, j, Vector2(0, 1), 4):
 						replace_with_special_piece(i, j + 1, current_color, COLUMN)
-						continue
+						#continue
 				 #Check for horizontal match of 3
 				if i > 0 and i < width - 1 and is_match(i, j, Vector2(1, 0), 3):
 					mark_pieces_for_removal(i, j, true)
@@ -475,10 +489,21 @@ func find_matches():
 func is_match(i, j, direction: Vector2, length: int) -> bool:
 	#if all_pieces[i][j].type == RAINBOW:
 		#return true
+	if all_pieces[i][j] == null:
+			return false
+	if all_pieces[i][j].color == null:
+		return false
 	for k in range(1, length):
 		var x = i + k * direction.x
 		var y = j + k * direction.y
-		if not in_grid(x, y) or all_pieces[x][y] == null or all_pieces[x][y].color != all_pieces[i][j].color:
+		if not in_grid(x, y):
+			return false
+		if all_pieces[x][y] == null:
+			return false
+		if all_pieces[x][y].color == null or all_pieces[x][y].color == "":
+			return false
+		
+		if all_pieces[x][y].color != all_pieces[i][j].color:
 			return false
 	return true
 
@@ -528,3 +553,13 @@ func is_l_shape(i, j) -> bool:
 			return true
 
 	return false
+
+func show_game_over_screen():
+	# Asegúrate de tener una instancia de la escena de Game Over
+	print('showed game over')
+	
+	# Puedes añadir la instancia de Game Over a la escena actual
+	#get_tree().root.add_child(game_over_instance)
+	
+	# Desactivar las interacciones del juego
+	get_tree().paused = true

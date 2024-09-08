@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://d1ucglmj14llv" path="res://assets/pieces/Rainbow.png" id="2_10f0k"]
 
 [node name="RainbowPiece" instance=ExtResource("1_5qa1u")]
+color = "rainbow"
 type = "rainbow"
 
 [node name="Sprite2D" parent="." index="0"]
